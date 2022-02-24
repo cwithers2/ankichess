@@ -48,143 +48,202 @@ NOTATION_MODEL = genanki.Model(
 def gen_id():
 	return random.randrange(1<<30, 1 << 31)
 
+def iterate(game, mainline=False):
+	"""
+	Iterate over the child nodes of a game.
+
+	Parameters
+	----------
+	game : chess.pgn.Game
+		A game to iterate over.
+	mainline : bool, default=False
+		If True, only iterate over the mainline, else visit all nodes.
+
+	yields
+	------
+	chess.pgn.GameNode
+		Some decendent of the root node: game.
+	"""
+	if mainline:
+		for child_node in game.mainline():
+			yield child_node	
+		return
+	for child_node in game.variations:
+		if not child_node.starts_variation(): # this condition blocks cards with multiple answers
+			yield child_node
+		for grandchild_node in iterate(child_node):
+			yield grandchild_node
+
+def game_node_hash(game_node):
+	"""
+	Creates a unique hash of a game node.
+
+	Hashes are created with respect to the current state of the board and the
+	move that put it in that state.
+
+	Parameters
+	----------
+	game_node : chess.pgn.GameNode
+		Some node to hash.
+
+	Returns
+	-------
+	str
+		A hash value.
+	"""
+	board = game_node.board()
+	if game_node is game_node.game(): #is root node, ie no (recorded) move lead to this position
+		h = board.fen()
+	else:
+		h = '_'.join([board.fen(), game_node.san()])
+	h = h.replace("/", "_")
+	h = h.replace(" ", "_")
+	return h
+
+def full_path(file_name):
+	"""
+	Returns the file name as if it were listed in the work directory.
+
+	Parameters
+	----------
+	file_name : str
+		Some file name.
+
+	Returns
+	-------
+	str
+	"""
+	return os.path.join(WORK_DIR, file_name)
+
+def write_svg(game_node):
+	"""
+	Writes an SVG file to disk based on a game node.
+
+	The image created is of the current state of the chess board with the most
+	recent move highlighted (if applicable).
+
+	Parameters
+	----------
+	game_node : chess.pgn.GameNode
+		A node to create an image for.
+
+	Returns
+	-------
+	str : file_name
+		The file name of the created image.
+
+	Note: The created file names are hashable, and no duplicate images are
+	      created during run-time.
+	"""
+	hash_val = game_node_hash(game_node)
+	file_name = f"{hash_val}.svg"
+	if file_name in write_svg.file_names:
+		return file_name
+	image = chess.svg.board(board=game_node.board(), lastmove=game_node.move, size=PIXEL_SIZE)
+	with open(full_path(file_name), "w") as f:
+		f.write(image)
+	write_svg.file_names.append(file_name)
+	return file_name
+write_svg.file_names=[] #static var used to avoid re-creating any images
+
+def image_data(game, mainline):
+	"""
+	Generate question/answer pairs for a game using images.
+
+	Parameters
+	----------
+	game : chess.pgn.Game
+		A game to generate questions and answers from.
+	mainline : bool
+		If true, only generate questions and answers for the mainline, else
+		generate values for all nodes.
+
+	Yields
+	------
+	(question, answer) : (str, str)
+		file names for images describing the relevant question and answer.
+	"""
+	for child_node in iterate(game, mainline):
+		question = write_svg(child_node.parent)
+		answer   = write_svg(child_node)
+		yield (question, answer)
+
 def notation_data(game):
 	"""
-	Generates PGN notation questions and answers based on turns and plys of a game. Example result:
-		yields: ("2.Ke2 ?", "2.Ke2 Ke7")
+	Generate question/answer pairs for a game using SAN notation.
+
+	Note: Only mainline nodes will have values generated for them.
 
 	Parameters
 	----------
 	game : chess.pgn.Game
-		A game to generate cards from.
+		A game to generate questions and answers from.
 
 	Yields
 	------
-	tuple(str, str)
-		Item 0 : str
-			Notation for the Current field.
-		Item 1 : str
-			Notation for the Next field.
+	(question, answer) : (str, str)
+		SAN notation for the relevant move in a question/answer format.
 	"""
-	last = "..."
-	board = game.board()
-	for m in game.mainline_moves():
-		move = board.san(m)
-		turn = (board.ply() // 2)+1
-		if board.turn != 0: #white's turn
-			curr = f"{turn}. ?"
-			next = f"{turn}.{move}"
+	for child_node in iterate(game):
+		turn = (child_node.parent.ply() // 2)+1
+		move = child_node.san()
+		if child_node.parent.turn() == chess.WHITE:
+			question = f"{turn}. ?"
+			answer   = f"{turn}.{move}"
 		else:
-			curr = f"{turn}... ?"
-			next = f"{turn}... {move}"
-		last = move
-		board.push(m)
-		yield (curr, next)
+			question = f"{turn}... ?"
+			answer   = f"{turn}... {move}"
+		yield (question, answer)
 
-def write_svg(board, lastmove, filename, parent):
-	"""Writes an SVG image of a board object and highlights the last move.
-
-	Parameters
-	----------
-	board : chess.BaseBoard
-		A chessboard.
-	lastmove: chess.Move
-		A move to be highlighted. None exclude highlighting a move.
-	filename: str
-		The name of the SVG file to write.
-	parent: str
-		The parent directory of the SVG file to write.
+def generate(game, out, title, blindfold=False, mainline=True):
 	"""
-	image = chess.svg.board(board=board, lastmove=lastmove, size=PIXEL_SIZE)
-	with open(os.path.join(parent, filename), "w") as f:
-		f.write(image)
-
-def image_data(game):
-	"""
-	Generates SVG image questions and answers based on turns and plys of a game.
+	Generate an Anki deck from a game.
 
 	Parameters
 	----------
 	game : chess.pgn.Game
-		A game to generate cards from.
-
-	Yields
-	------
-	tuple(str, str)
-		Item 0 : str
-			File name of the image to use for the Current field.
-		Item 1 : str
-			File name of the image to use for the Next field.
-	"""
-	board = game.board()
-	last = None
-	write_svg(board, None, f"{0:04}.svg", WORK_DIR)
-	for i, m in enumerate(game.mainline_moves()):
-		curr = f"{i:04}.svg"
-		next = f"{i+1:04}.svg"
-		board.push(m)
-		last = m
-		write_svg(board, last, next, WORK_DIR)
-		yield (curr, next)
-
-def generate(game, out_file_path, title, blindfold):
-	"""
-	Generates an anki deck for a game of chess.
-
-	Parameters
-	----------
-	game : chess.pgn.Game
-		A chess game to generate cards from.
-	out_file_path : str
+		A game to generate cards for.
+	out : str
 		The file name of the Anki package(.apkg) to generate.
 	title : str
 		The title to give the generated deck as seen in the Anki GUI.
-	blindfold : bool
-		if True, generate cards with text notation only, no images.
+	blindfold : bool, Default=False
+		If True, generate cards with text notation only, no images.
+		Implies mainline=True.
+	mainline : bool, Default=True
+		if True, only generate cards for the mainline moves.
 	"""
 	media = []
 	deck = genanki.Deck(gen_id(), title)
 	if blindfold:
-		for curr, next in notation_data(game):
-			note = genanki.Note(model=NOTATION_MODEL, fields=[curr, next])
+		for question, answer in notation_data(game):
+			note = genanki.Note(model=NOTATION_MODEL, fields=[question, answer])
 			deck.add_note(note)
 		package = genanki.Package(deck)
 	else:
-		for curr, next in image_data(game):
-			media.append(os.path.join(WORK_DIR, curr))
-			media.append(os.path.join(WORK_DIR, next))
-			curr = f"<img src='{curr}'>"
-			next = f"<img src='{next}'>"
-			note = genanki.Note(model=IMAGE_MODEL, fields=[curr, next])
+		for question, answer in image_data(game, mainline):
+			media.append(os.path.join(WORK_DIR, question))
+			media.append(os.path.join(WORK_DIR, answer))
+			question = f"<img src='{question}'>"
+			answer   = f"<img src='{answer}'>"
+			note = genanki.Note(model=IMAGE_MODEL, fields=[question, answer])
 			deck.add_note(note)
 		media = set(media)
 		package = genanki.Package(deck, media)
-	package.write_to_file(out_file_path)
+	package.write_to_file(out)
 	#cleanup
 	for filename in media:
 		os.remove(filename)
 
-def main(pgn, out_file_path, title, blindfold):
-	"""
-	Parameters
-	----------
-	pgn : str
-		A file name of a valid PGN file.
-	out_file_path : str
-		The file name of the Anki package to generate (extention .apkg).
-	title : str
-		The title to give the generated deck as seen in the Anki GUI.
-	blindfold : bool
-		If True, generate cards with text notation only, no images.
-	"""
-	with open(pgn, "r") as f:
+def main(args):
+	with open(args.pgn, "r") as f:
 		game = chess.pgn.read_game(f)
 		if not game:
 			raise SystemExit(f"could not load pgn file: {pgn}")
-		if not blindfold:
+		if not args.blindfold:
 			os.makedirs(WORK_DIR, exist_ok=False)
-		generate(game, out_file_path, title, blindfold)
-		if not blindfold:
+		generate(game, args.out, args.title, args.blindfold, args.mainline)
+		if not args.blindfold:
 			os.rmdir(WORK_DIR)
 
 
@@ -193,7 +252,8 @@ if __name__ == "__main__":
 	parser.add_argument("pgn", type=str, metavar="PGN_FILE", help="A PGN file to generate an Anki package from (mainline only)")
 	parser.add_argument("out", type=str, metavar="OUT_FILE", help="The file name of the Anki package to generate (typically ending in .apkg)")
 	parser.add_argument("title", type=str, metavar="TITLE",  help="The title to give the generated deck as seen in the Anki GUI")
-	parser.add_argument("--blindfold", action="store_true",  help="Generate cards with text notation only, no images")
+	parser.add_argument("--mainline", action="store_true",   help="Only generate cards for the mainline moves")
+	parser.add_argument("--blindfold", action="store_true",  help="Generate cards with text notation only, no images (Implies --mainline)")
 	args = parser.parse_args()
 
-	main(args.pgn, args.out, args.title, args.blindfold)
+	main(args)
