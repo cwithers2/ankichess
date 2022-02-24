@@ -11,7 +11,7 @@ Generate Anki packages from chess PGN files using the `genanki` and `chess` modu
 Currently there is no install tool. You can manually add `ankichess` to your path or call it from its project directory.
 
 ## Usage
-`ankichess [-h] [--blindfold] PGN_FILE OUT_FILE TITLE`
+`ankichess [-h] [--mainline] [--blindfold] PGN_FILE OUT_FILE TITLE`
 
 | argument      | positional | optional | description                                                               |
 |---------------|:----------:|:--------:|---------------------------------------------------------------------------|
