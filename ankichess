@@ -239,7 +239,7 @@ def main(args):
 	with open(args.pgn, "r") as f:
 		game = chess.pgn.read_game(f)
 		if not game:
-			raise SystemExit(f"could not load pgn file: {pgn}")
+			raise SystemExit(f"could not load pgn file: {args.pgn}")
 		if not args.blindfold:
 			os.makedirs(WORK_DIR, exist_ok=False)
 		generate(game, args.out, args.title, args.blindfold, args.mainline)
