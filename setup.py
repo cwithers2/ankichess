@@ -2,7 +2,7 @@ from setup tools import setup
 
 setup(
 	name="ankichess",
-	version="2.0",
+	version="2.1",
 	description="Genrate Anki packages from chess PGN files",
 	license="MIT",
 	author="Colin Withers",

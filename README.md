@@ -11,7 +11,7 @@ Generate Anki packages from chess PGN files using the `genanki` and `chess` modu
 Currently there is no install tool. You can manually add `ankichess` to your path or call it from its project directory.
 
 ## Usage
-`ankichess [-h] [--mainline] [--blindfold] PGN_FILE OUT_FILE TITLE`
+`ankichess [-h] [--mainline] [--blindfold] [--game NUM] PGN_FILE OUT_FILE TITLE`
 
 | argument      | positional | optional | description                                                               |
 |---------------|:----------:|:--------:|---------------------------------------------------------------------------|
@@ -20,10 +20,11 @@ Currently there is no install tool. You can manually add `ankichess` to your pat
 | `TITLE`       | x          |          | The title to give the generated deck as seen in the Anki GUI              |
 | `--mainline`  |            | x        | Only generate cards for the mainline moves                                |
 | `--blindfold` |            | x        | Generate text notation only, no images (Implies --mainline)               |
+| `--game NUM`  |            | x        | Select the Nth game from the PGN file (Default is 1)                      |
 
 example: `ankichess pgn/opera_game.pgn opera_game.apkg "The Opera Game"`
 
 Generated packages can be imported into the desktop version of Anki using the _Import File_ GUI.
 
 ## Example PGN Files
-Four PGN files are included in `pgn/`. They include _The Opera Game_, _Fool's Mate_, _Scholar's Mate_ an _Italian Game_. These files can be used for testing purposes.
+Three PGN files are included in `pgn/`. They include _The Opera Game_, _Fool's Mate_ and _Scholar's Mate_, and an _Italian Game_. These files are intended for testing purposes.

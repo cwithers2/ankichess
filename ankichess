@@ -237,9 +237,11 @@ def generate(game, out, title, blindfold=False, mainline=True):
 
 def main(args):
 	with open(args.pgn, "r") as f:
-		game = chess.pgn.read_game(f)
+		game = None
+		for _ in range(args.game):
+			game = chess.pgn.read_game(f)
 		if not game:
-			raise SystemExit(f"could not load pgn file: {args.pgn}")
+			raise SystemExit(f"could not load game {args.game} from pgn file {args.pgn}")
 		if not args.blindfold:
 			os.makedirs(WORK_DIR, exist_ok=False)
 		generate(game, args.out, args.title, args.blindfold, args.mainline)
@@ -249,11 +251,12 @@ def main(args):
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Generate Anki packages from chess PGN files")
-	parser.add_argument("pgn", type=str, metavar="PGN_FILE", help="A PGN file to generate an Anki package from (mainline only)")
-	parser.add_argument("out", type=str, metavar="OUT_FILE", help="The file name of the Anki package to generate (typically ending in .apkg)")
-	parser.add_argument("title", type=str, metavar="TITLE",  help="The title to give the generated deck as seen in the Anki GUI")
-	parser.add_argument("--mainline", action="store_true",   help="Only generate cards for the mainline moves")
-	parser.add_argument("--blindfold", action="store_true",  help="Generate cards with text notation only, no images (Implies --mainline)")
+	parser.add_argument("pgn", type=str, metavar="PGN_FILE",          help="A PGN file to generate an Anki package from (mainline only)")
+	parser.add_argument("out", type=str, metavar="OUT_FILE",          help="The file name of the Anki package to generate (typically ending in .apkg)")
+	parser.add_argument("title", type=str, metavar="TITLE",           help="The title to give the generated deck as seen in the Anki GUI")
+	parser.add_argument("--mainline", action="store_true",            help="Only generate cards for the mainline moves")
+	parser.add_argument("--blindfold", action="store_true",           help="Generate cards with text notation only, no images (Implies --mainline)")
+	parser.add_argument("--game", type=int, default=1, metavar="NUM", help="Select the Nth game from the PGN file (Default is 1)")
 	args = parser.parse_args()
 
 	main(args)
