@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import random
+import tempfile
+
+import chess
+import chess.pgn
+import chess.svg
+
+import genanki
+
+PIXEL_SIZE = 400
+WORK_DIR = os.path.join(tempfile.gettempdir(), str(os.getpid()))
+
+IMAGE_MODEL = genanki.Model(
+	1536607853, #unique ID
+	"Chess PGN Image Model",
+	fields=[
+		{"name" : "Current"},
+		{"name" : "Next"},
+	],
+	templates=[
+		{
+			"name" : "Image Card",
+			"qfmt" : "{{Current}}",
+			"afmt" : "{{Next}}"
+		}
+	])
+
+NOTATION_MODEL = genanki.Model(
+	1089711253,
+	"Chess PGN Notation Model",
+	fields=[
+		{"name" : "Current"},
+		{"name" : "Next"},
+	],
+	templates=[
+		{
+			"name" : "Notation Card",
+			"qfmt" : "{{Current}}",
+			"afmt" : "{{FrontSide}}<hr id='answer'>{{Next}}"
+		}
+	],
+	css=".card {font-family: arial;font-size: 18px;line-height: 120%;text-align: center;}")
+
+def gen_id():
+	return random.randrange(1<<30, 1 << 31)
+
+def notation_data(game):
+	"""
+	Generates PGN notation questions and answers based on turns and plys of a game. Example result:
+		yields: ("2.Ke2 ?", "2.Ke2 Ke7")
+
+	Parameters
+	----------
+	game : chess.pgn.Game
+		A game to generate cards from.
+
+	Yields
+	------
+	tuple(str, str)
+		Item 0 : str
+			Notation for the Current field.
+		Item 1 : str
+			Notation for the Next field.
+	"""
+	last = "..."
+	board = game.board()
+	for m in game.mainline_moves():
+		move = board.san(m)
+		turn = (board.ply() // 2)+1
+		if board.turn != 0: #white's turn
+			curr = f"{turn}. ?"
+			next = f"{turn}.{move}"
+		else:
+			curr = f"{turn}... ?"
+			next = f"{turn}... {move}"
+		last = move
+		board.push(m)
+		yield (curr, next)
+
+def write_svg(board, lastmove, filename, parent):
+	"""Writes an SVG image of a board object and highlights the last move.
+
+	Parameters
+	----------
+	board : chess.BaseBoard
+		A chessboard.
+	lastmove: chess.Move
+		A move to be highlighted. None exclude highlighting a move.
+	filename: str
+		The name of the SVG file to write.
+	parent: str
+		The parent directory of the SVG file to write.
+	"""
+	image = chess.svg.board(board=board, lastmove=lastmove, size=PIXEL_SIZE)
+	with open(os.path.join(parent, filename), "w") as f:
+		f.write(image)
+
+def image_data(game):
+	"""
+	Generates SVG image questions and answers based on turns and plys of a game.
+
+	Parameters
+	----------
+	game : chess.pgn.Game
+		A game to generate cards from.
+
+	Yields
+	------
+	tuple(str, str)
+		Item 0 : str
+			File name of the image to use for the Current field.
+		Item 1 : str
+			File name of the image to use for the Next field.
+	"""
+	board = game.board()
+	last = None
+	write_svg(board, None, f"{0:04}.svg", WORK_DIR)
+	for i, m in enumerate(game.mainline_moves()):
+		curr = f"{i:04}.svg"
+		next = f"{i+1:04}.svg"
+		board.push(m)
+		last = m
+		write_svg(board, last, next, WORK_DIR)
+		yield (curr, next)
+
+def generate(game, out_file_path, title, blindfold):
+	"""
+	Generates an anki deck for a game of chess.
+
+	Parameters
+	----------
+	game : chess.pgn.Game
+		A chess game to generate cards from.
+	out_file_path : str
+		The file name of the Anki package(.apkg) to generate.
+	title : str
+		The title to give the generated deck as seen in the Anki GUI.
+	blindfold : bool
+		if True, generate cards with text notation only, no images.
+	"""
+	media = []
+	deck = genanki.Deck(gen_id(), title)
+	if blindfold:
+		for curr, next in notation_data(game):
+			note = genanki.Note(model=NOTATION_MODEL, fields=[curr, next])
+			deck.add_note(note)
+		package = genanki.Package(deck)
+	else:
+		for curr, next in image_data(game):
+			media.append(os.path.join(WORK_DIR, curr))
+			media.append(os.path.join(WORK_DIR, next))
+			curr = f"<img src='{curr}'>"
+			next = f"<img src='{next}'>"
+			note = genanki.Note(model=IMAGE_MODEL, fields=[curr, next])
+			deck.add_note(note)
+		media = set(media)
+		package = genanki.Package(deck, media)
+	package.write_to_file(out_file_path)
+	#cleanup
+	for filename in media:
+		os.remove(filename)
+
+def main(pgn, out_file_path, title, blindfold):
+	"""
+	Parameters
+	----------
+	pgn : str
+		A file name of a valid PGN file.
+	out_file_path : str
+		The file name of the Anki package to generate (extention .apkg).
+	title : str
+		The title to give the generated deck as seen in the Anki GUI.
+	blindfold : bool
+		If True, generate cards with text notation only, no images.
+	"""
+	with open(pgn, "r") as f:
+		game = chess.pgn.read_game(f)
+		if not game:
+			raise SystemExit(f"could not load pgn file: {pgn}")
+		if not blindfold:
+			os.makedirs(WORK_DIR, exist_ok=False)
+		generate(game, out_file_path, title, blindfold)
+		if not blindfold:
+			os.rmdir(WORK_DIR)
+
+
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser(description="Generate Anki packages from chess PGN files")
+	parser.add_argument("pgn", type=str, metavar="PGN_FILE", help="A PGN file to generate an Anki package from (mainline only)")
+	parser.add_argument("out", type=str, metavar="OUT_FILE", help="The file name of the Anki package to generate (typically ending in .apkg)")
+	parser.add_argument("title", type=str, metavar="TITLE",  help="The title to give the generated deck as seen in the Anki GUI")
+	parser.add_argument("--blindfold", action="store_true",  help="Generate cards with text notation only, no images")
+	args = parser.parse_args()
+
+	main(args.pgn, args.out, args.title, args.blindfold)
