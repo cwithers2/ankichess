@@ -21,7 +21,7 @@ Currently there is no install tool. You can manually add `ankichess.py` to your 
 
 | argument      | positional | optional | description                                                               |
 |---------------|:----------:|:--------:|---------------------------------------------------------------------------|
-| `PGN_FILE`    | x          |          | A PGN file to generate an Anki package from (mainline only)               |
+| `PGN_FILE`    | x          |          | A PGN file to generate an Anki package from                               |
 | `OUT_FILE`    | x          |          | The file name of the Anki package to generate (typically ending in .apkg) |
 | `TITLE`       | x          |          | The title to give the generated deck as seen in the Anki GUI              |
 | `--mainline`  |            | x        | Only generate cards for the mainline moves                                |
