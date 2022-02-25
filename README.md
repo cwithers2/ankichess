@@ -3,6 +3,12 @@ Generate Anki packages from chess PGN files using the `genanki` and `chess` modu
 
 `ankichess.py` is the single program file in this project. It is written in Python 3 and is called from the commandline.
 
+#### Visual Example
+<img src="https://i.imgur.com/IOUd5Cq.png" alt="Visual Example" width=500/>
+
+#### Blindfold Example
+<img src="https://i.imgur.com/IPKAPQC.png" alt="Blindfold Example" width=500/>
+
 ## Installing Dependencies
 - `pip3 install genanki`
 - `pip3 install chess`
