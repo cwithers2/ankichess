@@ -9,12 +9,12 @@ Generate Anki packages from chess PGN files using the `genanki` and `chess` modu
 #### Blindfold Example
 <img src="https://i.imgur.com/IPKAPQC.png" alt="Blindfold Example" width=500/>
 
-## Installing Dependencies
-- `pip3 install genanki`
-- `pip3 install chess`
-
 ## Install
 Currently there is no install tool. You can manually add `ankichess.py` to your path or call it from its project directory.
+
+### Installing Dependencies
+- `pip3 install genanki`
+- `pip3 install chess`
 
 ## Usage
 `ankichess.py [-h] [--mainline] [--blindfold] [--game NUM] PGN_FILE OUT_FILE TITLE`
