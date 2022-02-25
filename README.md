@@ -1,17 +1,17 @@
 # Anki Chess
 Generate Anki packages from chess PGN files using the `genanki` and `chess` modules.
 
-`ankichess` is the single program file in this project. It is written in Python 3 and is called from the commandline.
+`ankichess.py` is the single program file in this project. It is written in Python 3 and is called from the commandline.
 
 ## Installing Dependencies
 - `pip3 install genanki`
 - `pip3 install chess`
 
 ## Install
-Currently there is no install tool. You can manually add `ankichess` to your path or call it from its project directory.
+Currently there is no install tool. You can manually add `ankichess.py` to your path or call it from its project directory.
 
 ## Usage
-`ankichess [-h] [--mainline] [--blindfold] [--game NUM] PGN_FILE OUT_FILE TITLE`
+`ankichess.py [-h] [--mainline] [--blindfold] [--game NUM] PGN_FILE OUT_FILE TITLE`
 
 | argument      | positional | optional | description                                                               |
 |---------------|:----------:|:--------:|---------------------------------------------------------------------------|
@@ -22,7 +22,7 @@ Currently there is no install tool. You can manually add `ankichess` to your pat
 | `--blindfold` |            | x        | Generate text notation only, no images (Implies --mainline)               |
 | `--game NUM`  |            | x        | Select the Nth game from the PGN file (Default is 1)                      |
 
-example: `ankichess pgn/opera_game.pgn opera_game.apkg "The Opera Game"`
+example: `ankichess.py pgn/opera_game.pgn opera_game.apkg "The Opera Game"`
 
 Generated packages can be imported into the desktop version of Anki using the _Import File_ GUI.
 

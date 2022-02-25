@@ -235,18 +235,27 @@ def generate(game, out, title, blindfold=False, mainline=True):
 	for filename in media:
 		os.remove(filename)
 
-def main(args):
-	with open(args.pgn, "r") as f:
-		game = None
-		for _ in range(args.game):
+def get_game(file_name, n):
+	game = None
+	with open(file_name, "r") as f:
+		for _ in range(n):
 			game = chess.pgn.read_game(f)
-		if not game:
-			raise SystemExit(f"could not load game {args.game} from pgn file {args.pgn}")
-		if not args.blindfold:
-			os.makedirs(WORK_DIR, exist_ok=False)
-		generate(game, args.out, args.title, args.blindfold, args.mainline)
-		if not args.blindfold:
-			os.rmdir(WORK_DIR)
+	if not game:
+		raise RuntimeError
+	return game
+
+def main(args):
+	try:
+		game = get_game(args.pgn, args.game)
+	except RuntimeError:
+		raise SystemExit(f"could not load game {args.game} from pgn file {args.pgn}")
+	except FileNotFoundError:
+		raise SystemExit(f"could not find pgn file {args.pgn}")
+	if not args.blindfold: #temp dir to make images
+		os.makedirs(WORK_DIR, exist_ok=False)
+	generate(game, args.out, args.title, args.blindfold, args.mainline)
+	if not args.blindfold:
+		os.rmdir(WORK_DIR)
 
 
 if __name__ == "__main__":
