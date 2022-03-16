@@ -115,7 +115,7 @@ def full_path(file_name):
 	"""
 	return os.path.join(WORK_DIR, file_name)
 
-def write_svg(game_node):
+def write_svg(game_node, flip):
 	"""
 	Writes an SVG file to disk based on a game node.
 
@@ -126,6 +126,9 @@ def write_svg(game_node):
 	----------
 	game_node : chess.pgn.GameNode
 		A node to create an image for.
+	
+	flip : bool
+		If true, flip the generated image to show from black's perspective.
 
 	Returns
 	-------
@@ -139,14 +142,14 @@ def write_svg(game_node):
 	file_name = f"{hash_val}.svg"
 	if file_name in write_svg.file_names:
 		return file_name
-	image = chess.svg.board(board=game_node.board(), lastmove=game_node.move, size=PIXEL_SIZE)
+	image = chess.svg.board(board=game_node.board(), lastmove=game_node.move, size=PIXEL_SIZE, flipped=flip)
 	with open(full_path(file_name), "w") as f:
 		f.write(image)
 	write_svg.file_names.append(file_name)
 	return file_name
 write_svg.file_names=[] #static var used to avoid re-creating any images
 
-def image_data(game, mainline):
+def image_data(game, mainline, flip):
 	"""
 	Generate question/answer pairs for a game using images.
 
@@ -157,6 +160,8 @@ def image_data(game, mainline):
 	mainline : bool
 		If true, only generate questions and answers for the mainline, else
 		generate values for all nodes.
+	flip : bool
+		if true, flip generated images to view from black's perspective.
 
 	Yields
 	------
@@ -164,8 +169,8 @@ def image_data(game, mainline):
 		file names for images describing the relevant question and answer.
 	"""
 	for child_node in iterate(game, mainline):
-		question = write_svg(child_node.parent)
-		answer   = write_svg(child_node)
+		question = write_svg(child_node.parent, flip)
+		answer   = write_svg(child_node, flip)
 		yield (question, answer)
 
 def notation_data(game):
@@ -195,7 +200,7 @@ def notation_data(game):
 			answer   = f"{turn}... {move}"
 		yield (question, answer)
 
-def generate(game, out, title, blindfold=False, mainline=True):
+def generate(game, out, title, blindfold=False, mainline=True, flip=False):
 	"""
 	Generate an Anki deck from a game.
 
@@ -212,6 +217,9 @@ def generate(game, out, title, blindfold=False, mainline=True):
 		Implies mainline=True.
 	mainline : bool, Default=True
 		if True, only generate cards for the mainline moves.
+	flip : bool, Default=False
+		if True, flip the generated images to view from black's perspective
+		Implies blindfold=False.
 	"""
 	media = []
 	deck = genanki.Deck(gen_id(), title)
@@ -221,7 +229,7 @@ def generate(game, out, title, blindfold=False, mainline=True):
 			deck.add_note(note)
 		package = genanki.Package(deck)
 	else:
-		for question, answer in image_data(game, mainline):
+		for question, answer in image_data(game, mainline, flip):
 			media.append(os.path.join(WORK_DIR, question))
 			media.append(os.path.join(WORK_DIR, answer))
 			question = f"<img src='{question}'>"
@@ -253,7 +261,7 @@ def main(args):
 		raise SystemExit(f"could not find pgn file {args.pgn}")
 	if not args.blindfold: #temp dir to make images
 		os.makedirs(WORK_DIR, exist_ok=False)
-	generate(game, args.out, args.title, args.blindfold, args.mainline)
+	generate(game, args.out, args.title, args.blindfold, args.mainline, args.flip)
 	if not args.blindfold:
 		os.rmdir(WORK_DIR)
 
@@ -265,6 +273,7 @@ if __name__ == "__main__":
 	parser.add_argument("title", type=str, metavar="TITLE",           help="The title to give the generated deck as seen in the Anki GUI")
 	parser.add_argument("--mainline", action="store_true",            help="Only generate cards for the mainline moves")
 	parser.add_argument("--blindfold", action="store_true",           help="Generate cards with text notation only, no images (Implies --mainline)")
+	parser.add_argument("--flip", action="store_true", help="Flip the generated images to view from black's perspective (Does nothing if --blindfold)")
 	parser.add_argument("--game", type=int, default=1, metavar="NUM", help="Select the Nth game from the PGN file (Default is 1)")
 	args = parser.parse_args()
 

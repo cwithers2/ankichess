@@ -72,14 +72,14 @@ def test_notation_data():
 
 def test_image_data():
 	print("Testing ankichess.image_data(fools_mate): ", end="", flush=True)
-	def write_svg(game_node):
+	def write_svg(game_node, flip):
 		test_image_data.h+=1
 		return test_image_data.h
 	ankichess.write_svg = write_svg
 	file_name = os.path.join(p, "pgn", "mates.pgn")
 	game = ankichess.get_game(file_name, 1)
 	expected = ( (1,2), (3,4), (5,6), (7,8) )
-	cards = list(ankichess.image_data(game, mainline=True))
+	cards = list(ankichess.image_data(game, mainline=True, flip=False))
 	if len(expected) != len(cards):
 		print("Failed")
 	for e, c in zip(expected, cards):
