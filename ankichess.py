@@ -139,7 +139,7 @@ def write_svg(game_node, flip):
 	      created during run-time.
 	"""
 	hash_val = game_node_hash(game_node)
-	file_name = f"{hash_val}.svg"
+	file_name = f"{('','_')[flip]}{hash_val}.svg"
 	if file_name in write_svg.file_names:
 		return file_name
 	image = chess.svg.board(board=game_node.board(), lastmove=game_node.move, size=PIXEL_SIZE, flipped=flip)
