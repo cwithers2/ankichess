@@ -27,6 +27,7 @@ Currently there is no install tool. You can manually add `ankichess.py` to your 
 | `--mainline`  |            | x        | Only generate cards for the mainline moves                                |
 | `--blindfold` |            | x        | Generate text notation only, no images (Implies --mainline)               |
 | `--game NUM`  |            | x        | Select the Nth game from the PGN file (Default is 1)                      |
+| `--flip`      |            | x        | Generate images from black's perspective (Does nothing if --blindfold)    |
 
 example: `ankichess.py pgn/opera_game.pgn opera_game.apkg "The Opera Game"`
 
