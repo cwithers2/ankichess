@@ -1,5 +1,5 @@
 # Anki Chess
-Generate Anki flashcards for chess...
+Generate Anki packages from chess PGN files.
 
 ## What is Anki?
 Anki is a free flashcard program. It uses a spaced repitition system (SRS) to improve flashcard memorization. Similar flashcards are stored in a 'deck', and one or more decks are stored in a 'package'.
